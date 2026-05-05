@@ -6,20 +6,30 @@ import {
   ResendConfirmationCodeCommand,
   InitiateAuthCommand,
   GlobalSignOutCommand,
+  AdminAddUserToGroupCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { redirect } from "next/navigation";
-import { cognitoClient, COGNITO_CLIENT_ID } from "@/lib/cognito";
+import { cognitoClient, COGNITO_CLIENT_ID, COGNITO_USER_POOL_ID } from "@/lib/cognito";
 import { setAuthCookies, clearAuthCookies, getAccessToken } from "@/lib/session";
 
 type ActionResult = { error: string } | undefined;
 
-export async function signUpAction(
-  _prev: ActionResult,
-  formData: FormData
-): Promise<ActionResult> {
+const ROLE_TO_GROUP = {
+  seller: "sellers",
+  customer: "customers",
+} as const;
+
+type Role = keyof typeof ROLE_TO_GROUP;
+
+export async function signUpAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "");
+  const role = String(formData.get("role") ?? "") as Role;
+
+  if (!ROLE_TO_GROUP[role]) {
+    return { error: "Invalid role. Please choose seller or customer." };
+  }
 
   try {
     await cognitoClient.send(
@@ -33,21 +43,22 @@ export async function signUpAction(
         ],
       })
     );
-  } catch (err: unknown) {
-    const message =
-      err && typeof err === "object" && "message" in err
-        ? String((err as any).message)
-        : "Sign up failed";
-    return { error: message };
+
+    await cognitoClient.send(
+      new AdminAddUserToGroupCommand({
+        UserPoolId: COGNITO_USER_POOL_ID,
+        Username: email,
+        GroupName: ROLE_TO_GROUP[role],
+      })
+    );
+  } catch (err: any) {
+    return { error: err?.message ?? "Sign up failed" };
   }
 
   redirect(`/confirm?email=${encodeURIComponent(email)}`);
 }
 
-export async function confirmAction(
-  _prev: ActionResult,
-  formData: FormData
-): Promise<ActionResult> {
+export async function confirmAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "");
   const code = String(formData.get("code") ?? "");
 
@@ -59,18 +70,14 @@ export async function confirmAction(
         ConfirmationCode: code,
       })
     );
-  } catch (err: unknown) {
-    const message =
-      err && typeof err === "object" && "message" in err
-        ? String((err as any).message)
-        : "Confirmation failed";
-    return { error: message };
+  } catch (err: any) {
+    return { error: err?.message ?? "Confirmation failed" };
   }
 
   redirect("/login?confirmed=1");
 }
 
-export async function resendCodeAction(formData: FormData): Promise<void> {
+export async function resendCodeAction(formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "");
   try {
     await cognitoClient.send(
@@ -79,16 +86,12 @@ export async function resendCodeAction(formData: FormData): Promise<void> {
         Username: email,
       })
     );
-  } catch (err: unknown) {
-    // Intentionally ignore: this action is invoked directly by <form action=...>,
-    // which requires a void return type.
+  } catch (err: any) {
+    return { error: err?.message ?? "Could not resend code" };
   }
 }
 
-export async function signInAction(
-  _prev: ActionResult,
-  formData: FormData
-): Promise<ActionResult> {
+export async function signInAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
@@ -97,10 +100,7 @@ export async function signInAction(
       new InitiateAuthCommand({
         ClientId: COGNITO_CLIENT_ID,
         AuthFlow: "USER_PASSWORD_AUTH",
-        AuthParameters: {
-          USERNAME: email,
-          PASSWORD: password,
-        },
+        AuthParameters: { USERNAME: email, PASSWORD: password },
       })
     );
 
@@ -114,12 +114,8 @@ export async function signInAction(
       idToken: auth.IdToken,
       refreshToken: auth.RefreshToken,
     });
-  } catch (err: unknown) {
-    const message =
-      err && typeof err === "object" && "message" in err
-        ? String((err as any).message)
-        : "Sign in failed";
-    return { error: message };
+  } catch (err: any) {
+    return { error: err?.message ?? "Sign in failed" };
   }
 
   redirect("/dashboard");

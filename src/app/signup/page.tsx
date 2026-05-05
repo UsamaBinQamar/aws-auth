@@ -1,33 +1,31 @@
-"use client";
-
 import Link from "next/link";
-import { useActionState } from "react";
-import { signUpAction } from "@/app/actions";
 
-export default function SignUpPage() {
-  const [state, formAction, pending] = useActionState(signUpAction, undefined);
-
+export default function SignupChooserPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-sm border p-8">
-        <h1 className="text-2xl font-semibold mb-1">Create your account</h1>
-        <p className="text-sm text-gray-500 mb-6">We'll send a verification code to your email.</p>
+      <div className="w-full max-w-2xl">
+        <h1 className="text-3xl font-semibold text-center mb-2">Join us</h1>
+        <p className="text-center text-gray-600 mb-8">How do you want to use the platform?</p>
 
-        <form action={formAction} className="space-y-4">
-          <Field label="Name" name="name" type="text" required />
-          <Field label="Email" name="email" type="email" required />
-          <Field label="Password" name="password" type="password" required minLength={8} />
-
-          {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full bg-black text-white rounded-md py-2.5 text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Link
+            href="/signup/customer"
+            className="bg-white border rounded-lg p-6 hover:border-black hover:shadow-sm transition group"
           >
-            {pending ? "Creating account…" : "Sign up"}
-          </button>
-        </form>
+            <h2 className="text-xl font-semibold mb-2">I'm a customer</h2>
+            <p className="text-sm text-gray-600 mb-4">Browse products and place orders.</p>
+            <span className="text-sm text-blue-600 group-hover:underline">Continue →</span>
+          </Link>
+
+          <Link
+            href="/signup/seller"
+            className="bg-white border rounded-lg p-6 hover:border-black hover:shadow-sm transition group"
+          >
+            <h2 className="text-xl font-semibold mb-2">I'm a seller</h2>
+            <p className="text-sm text-gray-600 mb-4">List products and manage your store.</p>
+            <span className="text-sm text-blue-600 group-hover:underline">Continue →</span>
+          </Link>
+        </div>
 
         <p className="text-sm text-gray-600 mt-6 text-center">
           Already have an account?{" "}
@@ -39,25 +37,3 @@ export default function SignUpPage() {
     </main>
   );
 }
-
-function Field(props: {
-  label: string;
-  name: string;
-  type: string;
-  required?: boolean;
-  minLength?: number;
-}) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">{props.label}</span>
-      <input
-        name={props.name}
-        type={props.type}
-        required={props.required}
-        minLength={props.minLength}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black"
-      />
-    </label>
-  );
-}
-

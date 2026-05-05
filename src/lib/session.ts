@@ -25,6 +25,8 @@ const idVerifier = CognitoJwtVerifier.create({
   clientId: COGNITO_CLIENT_ID,
 });
 
+export type UserRole = "seller" | "customer" | null;
+
 export async function setAuthCookies(tokens: {
   accessToken: string;
   idToken: string;
@@ -59,10 +61,20 @@ export async function getCurrentUser() {
   try {
     await accessVerifier.verify(accessToken);
     const idPayload = await idVerifier.verify(idToken);
+
+    const groups = (idPayload["cognito:groups"] as string[] | undefined) ?? [];
+    const role: UserRole = groups.includes("sellers")
+      ? "seller"
+      : groups.includes("customers")
+      ? "customer"
+      : null;
+
     return {
       sub: idPayload.sub,
       email: idPayload.email as string | undefined,
       name: idPayload.name as string | undefined,
+      role,
+      groups,
       claims: idPayload,
     };
   } catch {

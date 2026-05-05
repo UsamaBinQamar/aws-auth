@@ -1,12 +1,12 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cognito User Pool + User Pool Client for a Next.js application.
+  Cognito User Pool + Client + Groups for a Next.js application
+  with seller/customer roles.
 
 Parameters:
   AppName:
     Type: String
     Default: nextjs-auth-app
-    Description: Logical name used to prefix Cognito resources.
 
   PasswordMinimumLength:
     Type: Number
@@ -15,6 +15,7 @@ Parameters:
     MaxValue: 99
 
 Resources:
+
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -74,15 +75,29 @@ Resources:
         - email
         - name
 
+  SellersGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: sellers
+      Description: Users who can list and sell products
+      Precedence: 10
+
+  CustomersGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: customers
+      Description: Users who can browse and buy
+      Precedence: 20
+
 Outputs:
   UserPoolId:
     Description: Cognito User Pool ID
     Value: !Ref UserPool
-
   UserPoolClientId:
     Description: Cognito User Pool Client ID
     Value: !Ref UserPoolClient
-
   Region:
-    Description: AWS Region the stack is deployed in
+    Description: AWS Region
     Value: !Ref AWS::Region
